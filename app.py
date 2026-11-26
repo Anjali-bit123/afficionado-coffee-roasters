@@ -82,6 +82,16 @@ product["revenue_share_pct"] = (
 product["sales_rank"] = product["units_sold"].rank(method="min", ascending=False).astype(int)
 product["revenue_rank"] = product["total_revenue"].rank(method="min", ascending=False).astype(int)
 
+avg_price = (
+    filtered.groupby(["product_id", "product_category", "product_type", "product_detail"], as_index=False)
+    .agg(average_unit_price=("unit_price", "mean"))
+)
+product = product.merge(
+    avg_price,
+    on=["product_id", "product_category", "product_type", "product_detail"],
+    how="left"
+)
+
 category = (
     filtered.groupby("product_category", as_index=False)
     .agg(units_sold=("transaction_qty", "sum"),
@@ -212,19 +222,71 @@ st.header("5. Product Performance Details")
 detail = product.sort_values("total_revenue", ascending=False).copy()
 st.dataframe(
     detail[["product_id", "product_category", "product_type", "product_detail",
-            "units_sold", "total_revenue", "revenue_share_pct", "sales_rank", "revenue_rank"]].rename(columns={
+            "units_sold", "total_revenue", "revenue_share_pct", "average_unit_price", "transactions", "sales_rank", "revenue_rank"]].rename(columns={
         "product_id": "Product ID", "product_category": "Category",
         "product_type": "Product type", "product_detail": "Product",
         "units_sold": "Units sold", "total_revenue": "Revenue",
-        "revenue_share_pct": "Revenue share (%)", "sales_rank": "Sales rank",
+        "revenue_share_pct": "Revenue share (%)", "average_unit_price": "Average unit price",
+        "transactions": "Transactions", "sales_rank": "Sales rank",
         "revenue_rank": "Revenue rank"
-    }).style.format({"Revenue": "${:,.2f}", "Revenue share (%)": "{:.2f}%"}),
+    }).style.format({"Revenue": "${:,.2f}", "Revenue share (%)": "{:.2f}%", "Average unit price": "${:,.2f}"}),
     use_container_width=True, hide_index=True
 )
 
 csv = detail.to_csv(index=False).encode("utf-8")
 st.download_button("Download product analysis (CSV)", data=csv,
                    file_name="product_revenue_analysis.csv", mime="text/csv")
+
+# Explicit product-pattern checks requested in the project brief
+st.divider()
+st.header("5. Product Optimization: Underperforming Product Patterns")
+st.markdown(
+    "The project brief highlights two patterns: high-volume products with low revenue contribution, "
+    "and high-priced products with low sales frequency. The tables below flag products using "
+    "the median of the currently filtered product-level results as a transparent comparison benchmark."
+)
+
+median_units = product["units_sold"].median()
+median_revenue = product["total_revenue"].median()
+median_price = product["average_unit_price"].median()
+median_transactions = product["transactions"].median()
+
+high_volume_low_revenue = product[
+    (product["units_sold"] > median_units) &
+    (product["total_revenue"] < median_revenue)
+].sort_values("units_sold", ascending=False)
+
+high_price_low_frequency = product[
+    (product["average_unit_price"] > median_price) &
+    (product["transactions"] < median_transactions)
+].sort_values("average_unit_price", ascending=False)
+
+c1, c2 = st.columns(2)
+with c1:
+    st.markdown("**High-volume products with below-median revenue**")
+    st.caption("Products selling more units than the median product but generating less revenue than the median product.")
+    st.dataframe(
+        high_volume_low_revenue[["product_detail", "product_category", "units_sold", "total_revenue"]]
+        .rename(columns={"product_detail": "Product", "product_category": "Category",
+                         "units_sold": "Units sold", "total_revenue": "Revenue"})
+        .style.format({"Revenue": "${:,.2f}"}),
+        use_container_width=True, hide_index=True
+    )
+with c2:
+    st.markdown("**High-priced products with below-median sales frequency**")
+    st.caption("Products with an average unit price above the median and fewer transactions than the median product.")
+    st.dataframe(
+        high_price_low_frequency[["product_detail", "product_category", "average_unit_price", "transactions"]]
+        .rename(columns={"product_detail": "Product", "product_category": "Category",
+                         "average_unit_price": "Average unit price", "transactions": "Transactions"})
+        .style.format({"Average unit price": "${:,.2f}"}),
+        use_container_width=True, hide_index=True
+    )
+
+st.caption(
+    "These are relative flags based on the filtered dataset, not proof of low profit or poor customer satisfaction. "
+    "The dataset does not contain product costs, customer IDs, ratings or feedback."
+)
 
 # Data-driven recommendations
 st.divider()

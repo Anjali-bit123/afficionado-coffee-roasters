@@ -36,7 +36,7 @@ The project includes an interactive Streamlit dashboard built with Python, Panda
 
 Revenue share is calculated as product/category revenue divided by total revenue in the currently selected data.
 
-**Important limitation:** The supplied dataset does not contain product cost. Therefore, this project analyzes sales and revenue contribution, not gross profit, net profit or product profitability. It does not invent cost values.
+**Important limitation:** The supplied dataset does not contain product cost, customer IDs, ratings or feedback. Therefore, this project analyzes sales and revenue contribution, not gross profit, net profit, customer satisfaction or true customer-level preferences. The two product-pattern flags use median benchmarks on the currently filtered data and should be interpreted as relative screening indicators, not proof of poor profitability.
 
 ## Dashboard features
 1. KPI summary: total revenue, units sold, transaction count and average revenue per transaction.
@@ -46,7 +46,8 @@ Revenue share is calculated as product/category revenue divided by total revenue
 5. Category and product-type performance.
 6. Revenue concentration and cumulative revenue share.
 7. Product-level detail table and CSV export.
-8. Dynamic business insights and filters for year, category and store location.
+8. Explicit flags for high-volume/low-revenue products and high-priced/low-frequency products, using median benchmarks.
+9. Dynamic business insights and filters for year, category and store location.
 
 ## Run locally
 1. Install Python 3.10 or newer.
